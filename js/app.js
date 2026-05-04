@@ -5,7 +5,7 @@
 
 const app = {
     state: {
-        auditorMode: true,
+        auditorMode: false,
         currentView: 'login',
         vulnData: null
     },
@@ -39,9 +39,10 @@ const app = {
     },
 
     // Alternar el Modo Auditor
+   // Alternar el Modo Auditor
     toggleAuditorMode() {
-        this.state.auditorMode = !this.state.auditorMode;
-        this.elements.checkbox.checked = this.state.auditorMode;
+        // Leemos el estado directamente del checkbox (evita el bug del doble clic)
+        this.state.auditorMode = this.elements.checkbox.checked;
         
         const legendVuln = document.getElementById('legend-vuln');
         const legendFlow = document.getElementById('legend-flow');
@@ -52,14 +53,12 @@ const app = {
             this.elements.body.classList.add('auditor-mode');
             if (legendVuln) legendVuln.style.display = 'flex';
             if (legendFlow) legendFlow.style.display = 'flex';
-            
             vulnerableNodes.forEach(node => node.classList.add('vulnerable'));
         } else {
             // Desactivar
             this.elements.body.classList.remove('auditor-mode');
             if (legendVuln) legendVuln.style.display = 'none';
             if (legendFlow) legendFlow.style.display = 'none';
-            
             vulnerableNodes.forEach(node => node.classList.remove('vulnerable'));
         }
     },

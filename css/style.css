@@ -552,22 +552,23 @@ body.auditor-mode .btn-primary:hover {
   white-space: nowrap;
 }
 
-/* AUDITOR: Reveal the hidden consent */
+/* AUDITOR: Reveal the hidden consent sin romper el layout */
 body.auditor-mode .hidden-consent {
-  position: relative;
+  position: absolute;
+  bottom: 85px; /* Lo ubicamos flotando justo encima del botón de ingreso */
+  left: 0;
+  width: 100%;
   opacity: 1;
-  z-index: 1;
+  z-index: 10;
   pointer-events: auto;
-  bottom: auto;
-  left: auto;
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 10px;
-  padding: 8px 12px;
+  padding: 10px 12px;
   background: rgba(255, 0, 40, 0.08);
   border: 1px dashed rgba(255,42,60,0.5);
   border-radius: var(--radius-sm);
+  backdrop-filter: blur(4px);
   animation: reveal-bounce 0.5s ease;
 }
 
@@ -1216,12 +1217,34 @@ body.auditor-mode .node.vulnerable .node-click-hint {
 }
 
 /* ── DIAGRAM LAYOUT ZONES ── */
+.network-diagram {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: auto auto auto;
+  gap: 30px; /* Mayor separación entre elementos */
+  position: relative;
+  min-height: 480px;
+  align-items: center; /* Centrado vertical de las filas */
+}
+
 .zone-clients { grid-column: 1; grid-row: 1; }
 .zone-perimeter { grid-column: 2; grid-row: 1; }
 .zone-users { grid-column: 3; grid-row: 1; }
-.zone-frontend { grid-column: 1 / 4; grid-row: 2; display: flex; justify-content: center; }
-.zone-backend { grid-column: 1 / 4; grid-row: 3; display: flex; justify-content: center; gap: 60px; }
-
+.zone-frontend { 
+  grid-column: 1 / 4; 
+  grid-row: 2; 
+  display: flex; 
+  justify-content: center; 
+  margin-top: 20px;
+}
+.zone-backend { 
+  grid-column: 1 / 4; 
+  grid-row: 3; 
+  display: flex; 
+  justify-content: center; 
+  gap: 80px; /* Separación clara entre base de datos, firewall y storage */
+  margin-top: 20px;
+}
 /* ── LEGEND ── */
 .arch-legend {
   display: flex;
