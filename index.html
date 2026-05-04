@@ -102,22 +102,22 @@
                                 <i class="fa-solid fa-lock form-icon"></i>
                                 <input type="password" class="form-input" value="Med1c0@2024" readonly>
                             </div>
+                            <!-- Contenedor del botón, el dark pattern y el hotspot HTTP -->
+                            <div style="position:relative; margin-top: 15px;">
 
-                            <!-- DARK PATTERN: Casilla Oculta -->
-                            <div class="hidden-consent" id="dark-pattern">
-                                <span class="vuln-tag">VULN</span>
-                                <input type="checkbox" checked id="fake-consent">
-                                <label for="fake-consent">Acepto compartir mis datos y los de mis pacientes con terceros
-                                    aliados (Farmacéuticas) para fines publicitarios.</label>
-                                <!-- Botón forense -->
-                                <button type="button" class="hotspot-btn"
-                                    onclick="app.openModal('login_checkbox_oculto')" style="margin-left:auto;">
-                                    <i class="fa-solid fa-magnifying-glass-chart"></i> Analizar Falla
-                                </button>
-                            </div>
+                                <!-- DARK PATTERN: Casilla Oculta (Ahora contenido dentro del div relativo) -->
+                                <div class="hidden-consent" id="dark-pattern">
+                                    <span class="vuln-tag">VULN</span>
+                                    <input type="checkbox" checked id="fake-consent">
+                                    <label for="fake-consent">Acepto compartir mis datos y los de mis pacientes con
+                                        terceros aliados (Farmacéuticas) para fines publicitarios.</label>
+                                    <!-- Botón forense -->
+                                    <button type="button" class="hotspot-btn"
+                                        onclick="app.openModal('login_checkbox_oculto')" style="margin-left:auto;">
+                                        <i class="fa-solid fa-magnifying-glass-chart"></i> Analizar
+                                    </button>
+                                </div>
 
-                            <!-- Contenedor del botón y el hotspot HTTP -->
-                            <div style="position:relative;">
                                 <button type="button" class="btn-primary">Ingresar al Sistema</button>
 
                                 <div class="hotspot" style="bottom: -15px; right: -10px;">
@@ -283,20 +283,20 @@
 
                         <div class="network-diagram" id="arch-diagram">
                             <!-- Flechas SVG (Fondo) dibujadas con CSS/JS básico -->
-                            <svg class="arch-arrows" preserveAspectRatio="none">
-                                <!-- Las líneas se conectan conceptualmente. -->
+                            <!-- Flechas SVG Ortogonales (Líneas rectas) dibujadas con CSS/JS básico -->
+                            <svg class="arch-arrows"
+                                style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;">
                                 <!-- Paciente a Frontend -->
-                                <line x1="16%" y1="100" x2="50%" y2="200" id="line-1" />
-                                <!-- Admin a Frontend -->
-                                <line x1="84%" y1="100" x2="50%" y2="200" id="line-2" />
-                                <!-- Frontend a Firewall -->
-                                <line x1="50%" y1="260" x2="50%" y2="350" id="line-3" />
-                                <!-- Firewall a API (Backend) -->
-                                <line x1="50%" y1="410" x2="50%" y2="500" id="line-4" />
-                                <!-- API a DB -->
-                                <line x1="45%" y1="560" x2="30%" y2="650" id="line-5" />
-                                <!-- API a Storage -->
-                                <line x1="55%" y1="560" x2="70%" y2="650" id="line-6" />
+                                <path d="M 16.5% 85 V 150 H 50% V 200" class="line-flow" />
+                                <!-- Admin IT a Frontend -->
+                                <path d="M 83.5% 85 V 150 H 50% V 200" class="line-flow" />
+
+                                <!-- Frontend a Firewall/API -->
+                                <path d="M 50% 280 V 380" class="line-flow" />
+
+                                <!-- API a DB y Storage -->
+                                <path d="M 50% 480 V 540 H 16.5% V 590" class="line-flow" />
+                                <path d="M 50% 480 V 540 H 83.5% V 590" class="line-flow" />
                             </svg>
 
                             <!-- CAPA 1: Clientes y Usuarios -->

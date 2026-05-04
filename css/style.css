@@ -540,24 +540,24 @@ body.auditor-mode .btn-primary {
 body.auditor-mode .btn-primary:hover {
   box-shadow: 0 0 30px rgba(255,42,60,0.5), 0 4px 16px rgba(255,42,60,0.3);
 }
-
 /* ── HIDDEN CONSENT (DARK PATTERN) ── */
 .hidden-consent {
   position: absolute;
   opacity: 0.01;
   z-index: -999;
   pointer-events: none;
-  left: 0; bottom: -50px;
-  font-size: 10px;
-  white-space: nowrap;
+  left: 0; 
+  bottom: 0;
+  width: 100%;
 }
 
-/* AUDITOR: Reveal the hidden consent sin romper el layout */
+/* AUDITOR: Reveal the hidden consent flotando encima del botón */
 body.auditor-mode .hidden-consent {
   position: absolute;
-  bottom: 85px; /* Lo ubicamos flotando justo encima del botón de ingreso */
+  bottom: 100%; /* Lo ancla justo por encima del botón de ingresar */
   left: 0;
   width: 100%;
+  margin-bottom: 12px;
   opacity: 1;
   z-index: 10;
   pointer-events: auto;
@@ -572,11 +572,14 @@ body.auditor-mode .hidden-consent {
   animation: reveal-bounce 0.5s ease;
 }
 
+/* Corregimos el texto para que no se salga de la caja */
 body.auditor-mode .hidden-consent label {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--accent-primary);
   font-family: var(--font-mono);
   cursor: pointer;
+  white-space: normal; /* Permite saltos de línea */
+  line-height: 1.4;
 }
 
 body.auditor-mode .hidden-consent .vuln-tag {
