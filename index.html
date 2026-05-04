@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulador Ley 1581 de 2012 – Protección de Datos</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap"/>
+  <style>
+    :root {
+      --bg:       #07090f;
+      --surface:  #0d1117;
+      --card:     #131b27;
+      --border:   #1e2d40;
+      --amber:    #f59e0b;
+      --cyan:     #22d3ee;
+      --red:      #f87171;
+      --green:    #4ade80;
+      --text:     #e2e8f0;
+      --muted:    #64748b;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+      padding-bottom: 3rem; /* Espacio para el footer */
+    }
+
+    h1, h2, h3, h4 { font-family: 'Syne', sans-serif; }
+    code, pre, .mono { font-family: 'JetBrains Mono', monospace; }
+
+    /* ──── BACKGROUND GRID ──── */
+    .grid-bg {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(34,211,238,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(34,211,238,.035) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    .noise {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity:.04;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    /* ──── VIEWS ──── */
+    .view { display: none; position: relative; z-index: 1; }
+    .view.active { display: block; }
+
+    /* ──── CARD ──── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 0 0 1px rgba(34,211,238,.04), 0 8px 40px rgba(0,0,0,.5);
+    }
+
+    /* ──── ROLE BUTTONS ──── */
+    .role-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 2.2rem 2rem;
+      cursor: pointer;
+      transition: all .25s ease;
+      text-align: center;
+    }
+    .role-btn:hover { border-color: var(--cyan); box-shadow: 0 0 30px rgba(34,211,238,.12); transform: translateY(-3px); }
+    .role-btn.amber:hover { border-color: var(--amber); box-shadow: 0 0 30px rgba(245,158,11,.12); }
+
+    /* ──── HOTSPOT ──── */
+    .hotspot {
+      position: absolute;
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      z-index: 30;
+      font-size: 12px;
+      font-weight: 700;
+      font-family: 'Syne', sans-serif;
+      border: 2px solid currentColor;
+      transition: transform .2s;
+    }
+    .hotspot:hover { transform: scale(1.2); }
+    .hotspot.amber { background: rgba(245,158,11,.18); color: var(--amber); border-color: var(--amber); }
+    .hotspot.cyan  { background: rgba(34,211,238,.15); color: var(--cyan);  border-color: var(--cyan);  }
+    .hotspot.red   { background: rgba(248,113,113,.15); color: var(--red);   border-color: var(--red);   }
+    .hotspot::before {
+      content: '!';
+    }
+
+    @keyframes pulse-amber {
+      0%,100% { box-shadow: 0 0 0 0 rgba(245,158,11,.7); }
+      70%      { box-shadow: 0 0 0 10px rgba(245,158,11,0); }
+    }
+    @keyframes pulse-cyan {
+      0%,100% { box-shadow: 0 0 0 0 rgba(34,211,238,.7); }
+      70%      { box-shadow: 0 0 0 10px rgba(34,211,238,0); }
+    }
+    @keyframes pulse-red {
+      0%,100% { box-shadow: 0 0 0 0 rgba(248,113,113,.7); }
+      70%      { box-shadow: 0 0 0 10px rgba(248,113,113,0); }
+    }
+    .hotspot.amber { animation: pulse-amber 2s infinite; }
+    .hotspot.cyan  { animation: pulse-cyan  2s infinite; }
+    .hotspot.red   { animation: pulse-red   2s infinite; }
+
+    /* ──── MODAL ──── */
+    #modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.65);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      display: none; align-items: center; justify-content: center;
+      padding: 1rem;
+    }
+    #modal-overlay.open { display: flex; }
+    #modal-box {
+      background: var(--card);
+      border-radius: 16px;
+      max-width: 560px; width: 100%;
+      box-shadow: 0 0 60px rgba(34,211,238,.12);
+      animation: modal-in .25s ease;
+      overflow: hidden;
+    }
+    @keyframes modal-in {
+      from { opacity:0; transform:scale(.92) translateY(12px); }
+      to   { opacity:1; transform:scale(1) translateY(0); }
+    }
+    #modal-header { padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--border); }
+    #modal-body   { padding: 1.4rem 1.5rem; font-size: .93rem; line-height: 1.7; color: #cbd5e1; }
+    #modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border); display:flex; justify-content:flex-end; }
+
+    .tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: .72rem; font-family: 'JetBrains Mono', monospace;
+      padding: 3px 10px; border-radius: 999px;
+      font-weight: 600; letter-spacing: .03em;
+    }
+    .tag.amber { background: rgba(245,158,11,.15); color: var(--amber); border:1px solid rgba(245,158,11,.3); }
+    .tag.cyan  { background: rgba(34,211,238,.12); color: var(--cyan);  border:1px solid rgba(34,211,238,.25); }
+    .tag.red   { background: rgba(248,113,113,.12); color: var(--red);   border:1px solid rgba(248,113,113,.25); }
+    .tag.green { background: rgba(74,222,128,.12); color: var(--green); border:1px solid rgba(74,222,128,.25); }
+
+    /* ──── URL BAR ──── */
+    .url-bar {
+      background: #0a0f1a; border: 1px solid var(--border);
+      border-radius: 8px; padding: .5rem 1rem;
+      font-family: 'JetBrains Mono', monospace; font-size: .82rem;
+      display: flex; align-items: center; gap: .5rem;
+      color: #94a3b8;
+    }
+    .url-bar .lock { color: var(--red); }
+    .url-bar .lock.secure { color: var(--green); }
+
+    /* ──── INPUT ──── */
+    .sim-input {
+      width: 100%; background: #0a0f1a;
+      border: 1px solid var(--border);
+      border-radius: 8px; padding: .75rem 1rem;
+      color: var(--text); font-family: 'DM Sans', sans-serif;
+      font-size: .95rem; outline: none;
+      transition: border-color .2s;
+    }
+    .sim-input:focus { border-color: var(--cyan); }
+
+    /* ──── ARCH DIAGRAM ──── */
+    .arch-node {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.2rem;
+      text-align: center;
+      min-width: 120px;
+      position: relative;
+    }
+    .arch-arrow {
+      display: flex; align-items: center; flex: 1;
+      position: relative;
+    }
+    .arch-arrow::before {
+      content: '';
+      display: block; flex: 1; height: 2px;
+      background: linear-gradient(90deg, var(--border), var(--cyan));
+    }
+    .arch-arrow .tip {
+      color: var(--cyan); font-size: 1rem; margin-left: -2px;
+    }
+
+    /* ──── CODE BLOCK ──── */
+    .code-block {
+      background: #050810; border: 1px solid var(--border);
+      border-radius: 8px; padding: 1rem 1.2rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .8rem; line-height: 1.7; overflow-x: auto;
+    }
+    .code-block .k { color: #c792ea; }
+    .code-block .s { color: var(--green); }
+    .code-block .h { color: var(--amber); }
+    .code-block .c { color: var(--muted); }
+
+    /* ──── DASHBOARD TABLE ──── */
+    .data-row {
+      display: flex; gap: 1rem;
+      padding: .65rem 0;
+      border-bottom: 1px solid var(--border);
+      align-items: baseline;
+    }
+    .data-row:last-child { border-bottom: none; }
+    .data-label { font-size: .78rem; color: var(--muted); min-width: 140px; font-family: 'JetBrains Mono', monospace; }
+    .data-val   { font-size: .9rem; color: var(--text); font-weight: 500; }
+
+    .sensitive-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: .68rem; background: rgba(248,113,113,.12);
+      color: var(--red); border: 1px solid rgba(248,113,113,.25);
+      border-radius: 4px; padding: 2px 7px;
+      font-family: 'JetBrains Mono', monospace; font-weight: 600;
+      vertical-align: middle; margin-left: 6px;
+    }
+
+    /* ──── PROGRESS BAR ──── */
+    .progress-bar-wrap {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 999px; height: 6px; overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%; border-radius: 999px;
+      background: linear-gradient(90deg, var(--cyan), #6366f1);
+      transition: width .5s ease;
+    }
+
+    /* ──── BREADCRUMB ──── */
+    .breadcrumb { display: flex; align-items: center; gap: .5rem; font-size: .8rem; color: var(--muted); }
+    .breadcrumb .sep { color: var(--border); }
+    .breadcrumb .current { color: var(--cyan); font-weight: 600; }
+
+    /* ──── NAV STEP ──── */
+    .step-dot {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .72rem; font-weight: 700; font-family: 'Syne', sans-serif;
+      border: 2px solid var(--border); color: var(--muted);
+      transition: all .3s;
+    }
+    .step-dot.done   { background: rgba(74,222,128,.15); border-color: var(--green); color: var(--green); }
+    .step-dot.active { background: rgba(34,211,238,.15); border-color: var(--cyan);  color: var(--cyan); }
+
+    .step-line { flex: 1; height: 2px; background: var(--border); transition: background .3s; }
+    .step-line.done { background: linear-gradient(90deg, var(--green), var(--cyan)); }
+
+    /* ──── BTN ──── */
+    .btn-primary {
+      background: linear-gradient(135deg, var(--cyan), #6366f1);
+      color: #0a0f1e; font-weight: 700; font-family: 'Syne', sans-serif;
+      padding: .75rem 2rem; border-radius: 10px; border: none;
+      cursor: pointer; transition: opacity .2s, transform .15s;
+      font-size: .95rem; letter-spacing: .02em;
+    }
+    .btn-primary:hover { opacity: .9; transform: translateY(-1px); }
+    .btn-secondary {
+      background: transparent; color: var(--cyan);
+      border: 1px solid var(--cyan); font-weight: 600;
+      font-family: 'Syne', sans-serif; padding: .7rem 1.8rem;
+      border-radius: 10px; cursor: pointer; transition: all .2s;
+      font-size: .9rem;
+    }
+    .btn-secondary:hover { background: rgba(34,211,238,.08); }
+
+    /* ──── SCROLLBAR ──── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ──── ANIMATIONS ──── */
+    @keyframes fade-up {
+      from { opacity:0; transform:translateY(20px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    .fade-up { animation: fade-up .4s ease forwards; }
+    .delay-1 { animation-delay: .1s; opacity:0; }
+    .delay-2 { animation-delay: .2s; opacity:0; }
+    .delay-3 { animation-delay: .3s; opacity:0; }
+
+    .glow-text { text-shadow: 0 0 20px rgba(34,211,238,.4); }
+  </style>
+</head>
+<body>
+  <div class="grid-bg"></div>
+  <div class="noise"></div>
+
+  <!-- ═══════════════════════════════════════════════
+       MODAL GLOBAL
+  ═══════════════════════════════════════════════ -->
+  <div id="modal-overlay" onclick="closeModal(event)">
+    <div id="modal-box">
+      <div id="modal-header" class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <span id="modal-icon" class="text-xl"></span>
+          <h3 id="modal-title" class="text-base font-bold" style="font-family:'Syne',sans-serif"></h3>
+        </div>
+        <span id="modal-tag"></span>
+      </div>
+      <div id="modal-body"></div>
+      <div id="modal-footer">
+        <button class="btn-primary text-sm" onclick="closeModal()">Entendido &nbsp;<i class="fa-solid fa-check"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       VISTA 1 – SELECCIÓN DE ROL
+  ═══════════════════════════════════════════════ -->
+  <div id="view-1" class="view active min-h-screen flex flex-col items-center justify-center p-6">
+    <div class="max-w-3xl w-full">
+
+      <!-- Logo área -->
+      <div class="text-center mb-10 fade-up">
+        <div class="inline-flex items-center gap-3 mb-5">
+          <div style="background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.25);border-radius:12px;padding:.8rem 1rem;">
+            <i class="fa-solid fa-shield-halved text-2xl" style="color:var(--cyan)"></i>
+          </div>
+          <span class="tag cyan">Colombia · Ley 1581 de 2012</span>
+        </div>
+        <h1 class="text-4xl md:text-5xl font-black tracking-tight mb-3 glow-text" style="color:var(--cyan)">
+          Simulador de<br/>Vulnerabilidades
+        </h1>
+        <p class="text-lg" style="color:var(--muted)">Protección de Datos Personales aplicada a Software Académico</p>
+      </div>
+
+      <!-- Steps indicator -->
+      <div class="flex items-center mb-10 fade-up delay-1">
+        <div class="step-dot active">1</div>
+        <div class="step-line"></div>
+        <div class="step-dot">2</div>
+        <div class="step-line"></div>
+        <div class="step-dot">3</div>
+        <div class="step-line"></div>
+        <div class="step-dot">4</div>
+      </div>
+
+      <p class="text-center mb-6 font-semibold fade-up delay-1" style="color:var(--muted);font-size:.9rem;text-transform:uppercase;letter-spacing:.1em">
+        Selecciona tu rol para iniciar la simulación
+      </p>
+
+      <div class="grid md:grid-cols-2 gap-5 fade-up delay-2">
+        <!-- Estudiante -->
+        <button class="role-btn amber" onclick="selectRole('student')">
+          <div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);border-radius:10px;width:56px;height:56px;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+            <i class="fa-solid fa-user-graduate text-2xl" style="color:var(--amber)"></i>
+          </div>
+          <h2 class="text-xl font-bold mb-2" style="color:var(--amber)">Usuario (Estudiante)</h2>
+          <p style="color:var(--muted);font-size:.88rem;line-height:1.6">
+            Aprende a identificar señales de alerta, conocer tus derechos bajo la Ley 1581 y proteger tu información personal en plataformas académicas.
+          </p>
+          <div class="flex flex-wrap gap-2 justify-center mt-4">
+            <span class="tag amber">Art. 8 – Derechos</span>
+            <span class="tag amber">Datos Sensibles</span>
+            <span class="tag amber">Phishing</span>
+          </div>
+        </button>
+
+        <!-- Desarrollador -->
+        <button class="role-btn" onclick="selectRole('dev')">
+          <div style="background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.25);border-radius:10px;width:56px;height:56px;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+            <i class="fa-solid fa-terminal text-2xl" style="color:var(--cyan)"></i>
+          </div>
+          <h2 class="text-xl font-bold mb-2 glow-text" style="color:var(--cyan)">Desarrollador</h2>
+          <p style="color:var(--muted);font-size:.88rem;line-height:1.6">
+            Descubre vulnerabilidades técnicas, mejores prácticas de seguridad y las obligaciones que impone la Ley 1581 en el diseño de sistemas.
+          </p>
+          <div class="flex flex-wrap gap-2 justify-center mt-4">
+            <span class="tag cyan">Art. 17 – Responsabilidad</span>
+            <span class="tag cyan">Cifrado</span>
+            <span class="tag cyan">IDOR</span>
+          </div>
+        </button>
+      </div>
+
+      <p class="text-center mt-8 text-xs fade-up delay-3" style="color:var(--muted)">
+        <i class="fa-solid fa-circle-info mr-1"></i>
+        Este simulador es un recurso educativo. Los datos mostrados son ficticios.
+      </p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       VISTA 2 – LOGIN SIMULADO
+  ═══════════════════════════════════════════════ -->
+  <div id="view-2" class="view min-h-screen flex flex-col p-6">
+    <div class="max-w-xl mx-auto w-full mt-8">
+
+      <!-- Breadcrumb + Steps -->
+      <div class="breadcrumb mb-4 fade-up">
+        <i class="fa-solid fa-house" style="font-size:.75rem"></i>
+        <span class="sep">/</span>
+        <span>Selección de Rol</span>
+        <span class="sep">/</span>
+        <span class="current">Login</span>
+      </div>
+      <div class="flex items-center mb-8 fade-up">
+        <div class="step-dot done"><i class="fa-solid fa-check" style="font-size:.6rem"></i></div>
+        <div class="step-line done"></div>
+        <div class="step-dot active">2</div>
+        <div class="step-line"></div>
+        <div class="step-dot" id="step3-dot">3</div>
+        <div class="step-line"></div>
+        <div class="step-dot">4</div>
+      </div>
+
+      <div class="card p-6 fade-up delay-1">
+        <!-- Logo ficticio -->
+        <div class="text-center mb-6">
+          <div style="display:inline-flex;align-items:center;gap:.5rem;background:rgba(34,211,238,.07);border:1px solid var(--border);border-radius:8px;padding:.5rem 1rem;margin-bottom:.75rem;">
+            <i class="fa-solid fa-graduation-cap" style="color:var(--cyan)"></i>
+            <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;">UniSistemas</span>
+            <span style="color:var(--muted);font-size:.75rem;">– Portal Académico</span>
+          </div>
+          <p id="login-role-badge" class="text-xs mt-1" style="color:var(--muted)"></p>
+        </div>
+
+        <!-- URL BAR con hotspot -->
+        <div style="position:relative;margin-bottom:1.2rem;">
+          <label class="block mb-1.5 text-xs font-semibold" style="color:var(--muted);letter-spacing:.06em;text-transform:uppercase;">Dirección del sitio</label>
+          <div class="url-bar">
+            <i id="url-lock-icon" class="fa-solid fa-lock-open lock"></i>
+            <span id="url-text" class="text-xs">http://unisistemas.edu.co/login</span>
+          </div>
+          <!-- Hotspot URL -->
+          <div id="hs-url" class="hotspot" style="top:-12px;right:-12px;" onclick="openHotspot('url')"></div>
+        </div>
+
+        <!-- Email -->
+        <div class="mb-4">
+          <label class="block mb-1.5 text-xs font-semibold" style="color:var(--muted);letter-spacing:.06em;text-transform:uppercase;">Correo Institucional</label>
+          <input class="sim-input" type="email" placeholder="estudiante@unisistemas.edu.co" value="j.rodriguez@unisistemas.edu.co"/>
+        </div>
+
+        <!-- Password con hotspot -->
+        <div class="mb-6" style="position:relative;">
+          <label class="block mb-1.5 text-xs font-semibold" style="color:var(--muted);letter-spacing:.06em;text-transform:uppercase;">Contraseña</label>
+          <input class="sim-input" type="password" placeholder="••••••••" value="MiClave2024"/>
+          <!-- Hotspot password -->
+          <div id="hs-password" class="hotspot" style="top:-12px;right:-12px;" onclick="openHotspot('password')"></div>
+        </div>
+
+        <!-- Login Button con hotspot -->
+        <div style="position:relative;">
+          <button class="btn-primary w-full" onclick="goToNext()">
+            <i class="fa-solid fa-right-to-bracket mr-2"></i>Ingresar al Sistema
+          </button>
+          <!-- Hotspot login btn (solo DEV) -->
+          <div id="hs-login-btn" class="hotspot cyan" style="top:-12px;right:-12px;display:none;" onclick="openHotspot('loginbtn')"></div>
+        </div>
+
+        <div class="mt-4 text-center">
+          <span class="text-xs" style="color:var(--muted)">¿Olvidaste tu contraseña? <span style="color:var(--cyan);cursor:pointer;">Recuperar acceso</span></span>
+        </div>
+      </div>
+
+      <div class="text-center mt-4">
+        <button class="btn-secondary text-sm" onclick="goToView(1)">
+          <i class="fa-solid fa-arrow-left mr-1"></i> Cambiar rol
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       VISTA 3 – ARQUITECTURA (Solo DEV)
+  ═══════════════════════════════════════════════ -->
+  <div id="view-3" class="view min-h-screen p-6">
+    <div class="max-w-4xl mx-auto">
+
+      <div class="breadcrumb mb-4 fade-up">
+        <i class="fa-solid fa-house" style="font-size:.75rem"></i>
+        <span class="sep">/</span><span>Login</span>
+        <span class="sep">/</span>
+        <span class="current">Arquitectura</span>
+      </div>
+      <div class="flex items-center mb-6 fade-up">
+        <div class="step-dot done"><i class="fa-solid fa-check" style="font-size:.6rem"></i></div>
+        <div class="step-line done"></div>
+        <div class="step-dot done"><i class="fa-solid fa-check" style="font-size:.6rem"></i></div>
+        <div class="step-line done"></div>
+        <div class="step-dot active">3</div>
+        <div class="step-line"></div>
+        <div class="step-dot">4</div>
+      </div>
+
+      <div class="card p-6 mb-6 fade-up delay-1">
+        <div class="flex items-center gap-3 mb-1">
+          <span class="tag cyan"><i class="fa-solid fa-diagram-project mr-1"></i>Diagrama de Flujo</span>
+          <span class="tag amber"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Vista exclusiva: Desarrollador</span>
+        </div>
+        <h2 class="text-2xl font-bold mt-3 mb-1">Arquitectura de Comunicación</h2>
+        <p style="color:var(--muted);font-size:.88rem;">Visualiza cómo viajan los datos desde el cliente hasta la base de datos y dónde aplica la Ley 1581 de 2012.</p>
+      </div>
+
+      <!-- Diagrama horizontal -->
+      <div class="card p-6 mb-6 fade-up delay-1" style="overflow-x:auto;">
+        <div class="flex items-stretch gap-2 min-w-max">
+
+          <!-- Frontend -->
+          <div class="arch-node" style="border-color:rgba(34,211,238,.3);">
+            <i class="fa-solid fa-display text-xl mb-2" style="color:var(--cyan);display:block"></i>
+            <div class="text-sm font-bold" style="color:var(--cyan);">Frontend</div>
+            <div class="text-xs mt-1" style="color:var(--muted);">Cliente / Browser</div>
+          </div>
+
+          <!-- Arrow 1 + hotspot JSON -->
+          <div class="arch-arrow" style="min-width:80px;position:relative;">
+            <div style="flex:1;height:2px;background:linear-gradient(90deg,var(--border),var(--amber))"></div>
+            <i class="fa-solid fa-chevron-right" style="color:var(--amber);margin-left:-2px"></i>
+            <div id="hs-json-plain" class="hotspot amber" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);" onclick="openHotspot('jsonplain')"></div>
+          </div>
+
+          <!-- Backend -->
+          <div class="arch-node" style="position:relative;border-color:rgba(245,158,11,.3);">
+            <i class="fa-solid fa-server text-xl mb-2" style="color:var(--amber);display:block"></i>
+            <div class="text-sm font-bold" style="color:var(--amber);">Backend</div>
+            <div class="text-xs mt-1" style="color:var(--muted);">API / Server</div>
+            <div id="hs-env" class="hotspot red" style="top:-12px;right:-12px;" onclick="openHotspot('env')"></div>
+          </div>
+
+          <!-- Arrow 2 + hotspot hash -->
+          <div class="arch-arrow" style="min-width:80px;position:relative;">
+            <div style="flex:1;height:2px;background:linear-gradient(90deg,var(--border),var(--green))"></div>
+            <i class="fa-solid fa-chevron-right" style="color:var(--green);margin-left:-2px"></i>
+            <div id="hs-json-hash" class="hotspot" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(74,222,128,.15);color:var(--green);border-color:var(--green);animation:none;" onclick="openHotspot('jsonhash')">
+            </div>
+          </div>
+
+          <!-- DB -->
+          <div class="arch-node" style="border-color:rgba(74,222,128,.3);">
+            <i class="fa-solid fa-database text-xl mb-2" style="color:var(--green);display:block"></i>
+            <div class="text-sm font-bold" style="color:var(--green);">Base de Datos</div>
+            <div class="text-xs mt-1" style="color:var(--muted);">PostgreSQL / MySQL</div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Código comparativo -->
+      <div class="grid md:grid-cols-2 gap-5 mb-6 fade-up delay-2">
+
+        <!-- JSON Plano (Vulnerable) -->
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="tag red"><i class="fa-solid fa-x mr-1"></i>VULNERABLE · Solicitud HTTP</span>
+          </div>
+          <div class="code-block">
+<span class="c">// POST /api/login — HTTP (sin cifrar)</span>
+<span class="k">POST</span> /api/login HTTP/1.1
+Host: unisistemas.edu.co
+
+<span class="k">{</span>
+  <span class="s">"email"</span>: <span class="h">"j.rodriguez@uni.edu.co"</span>,
+  <span class="s">"password"</span>: <span class="h">"MiClave2024"</span>  <span class="c">// ⚠ texto plano</span>
+<span class="k">}</span>
+          </div>
+        </div>
+
+        <!-- JSON Hasheado (Seguro) -->
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="tag green"><i class="fa-solid fa-check mr-1"></i>SEGURO · Almacenamiento DB</span>
+          </div>
+          <div class="code-block">
+<span class="c">// Registro en DB — Art. 17 Ley 1581</span>
+<span class="k">INSERT INTO</span> users (email, password_hash)
+<span class="k">VALUES</span> (
+  <span class="h">'j.rodriguez@uni.edu.co'</span>,
+  <span class="s">'$2b$12$eImiTXuWVxfM37uY4JANjQ..'</span>
+  <span class="c">// ✅ bcrypt hash — irreversible</span>
+<span class="k">)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- .env snippet -->
+      <div class="card p-5 mb-6 fade-up delay-2" style="border-color:rgba(248,113,113,.2);">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="tag red"><i class="fa-solid fa-file-shield mr-1"></i>.env — ¡NUNCA subir al repositorio!</span>
+        </div>
+        <div class="code-block">
+<span class="c"># .env — Cadena de conexión protegida</span>
+<span class="k">DB_HOST</span>=<span class="h">db.unisistemas.internal</span>
+<span class="k">DB_USER</span>=<span class="s">admin_db</span>
+<span class="k">DB_PASS</span>=<span class="s">S3cur3P@ss!2024</span>        <span class="c"># ← jamás en código fuente</span>
+<span class="k">DB_NAME</span>=<span class="s">unisistemas_prod</span>
+<span class="k">JWT_SECRET</span>=<span class="h">xK#9@mQ2r$7vNpL...</span>    <span class="c"># ← en .gitignore siempre</span>
+        </div>
+        <p class="text-xs mt-3" style="color:var(--muted)">
+          <i class="fa-solid fa-circle-info mr-1" style="color:var(--amber)"></i>
+          Exponer credenciales en repositorios públicos viola el <strong style="color:var(--text)">Art. 17 literal f</strong> de la Ley 1581: deber de conservar la información con condiciones de seguridad adecuadas.
+        </p>
+      </div>
+
+      <div class="flex justify-between items-center fade-up delay-3">
+        <button class="btn-secondary" onclick="goToView(2)"><i class="fa-solid fa-arrow-left mr-1"></i>Volver</button>
+        <button class="btn-primary" onclick="goToView(4)">
+          Continuar al Dashboard &nbsp;<i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       VISTA 4 – DASHBOARD / PERFIL
+  ═══════════════════════════════════════════════ -->
+  <div id="view-4" class="view min-h-screen p-6">
+    <div class="max-w-3xl mx-auto">
+
+      <div class="breadcrumb mb-4 fade-up">
+        <i class="fa-solid fa-house" style="font-size:.75rem"></i>
+        <span class="sep">/</span><span>Inicio</span>
+        <span class="sep">/</span>
+        <span class="current">Mi Perfil</span>
+      </div>
+      <div class="flex items-center mb-6 fade-up">
+        <div class="step-dot done"><i class="fa-solid fa-check" style="font-size:.6rem"></i></div>
+        <div class="step-line done"></div>
+        <div class="step-dot done"><i class="fa-solid fa-check" style="font-size:.6rem"></i></div>
+        <div class="step-line done"></div>
+        <div class="step-dot done" id="step3-done"><i class="fa-solid fa-check" style="font-size:.6rem"></i></div>
+        <div class="step-line done"></div>
+        <div class="step-dot active">4</div>
+      </div>
+
+      <!-- Header dashboard -->
+      <div class="card p-5 mb-5 flex items-center gap-5 fade-up delay-1" style="position:relative;">
+        <div style="background:linear-gradient(135deg,rgba(34,211,238,.2),rgba(99,102,241,.2));border:1px solid rgba(34,211,238,.2);border-radius:50%;width:62px;height:62px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="fa-solid fa-user text-2xl" style="color:var(--cyan)"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h2 class="text-xl font-bold">Juan Sebastián Rodríguez Mora</h2>
+            <span id="dash-role-badge" class="tag cyan"></span>
+          </div>
+          <p class="text-xs mt-0.5" style="color:var(--muted)">Código: 2021115073 · Ingeniería de Sistemas · 7° Semestre</p>
+          <div class="mt-2">
+            <div class="progress-bar-wrap" style="width:180px;">
+              <div class="progress-bar-fill" style="width:68%"></div>
+            </div>
+            <p class="text-xs mt-1" style="color:var(--muted)">Avance curricular: 68%</p>
+          </div>
+        </div>
+        <!-- Hotspot perfil (info de acceso) -->
+        <div id="hs-profile" class="hotspot" style="top:-12px;right:-12px;" onclick="openHotspot('profile')"></div>
+      </div>
+
+      <!-- Datos personales -->
+      <div class="card p-5 mb-5 fade-up delay-1" style="position:relative;">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-bold text-base">Información Personal</h3>
+          <span class="tag cyan"><i class="fa-solid fa-lock mr-1"></i>Datos Protegidos · Ley 1581</span>
+        </div>
+
+        <div class="data-row">
+          <span class="data-label">Nombre completo</span>
+          <span class="data-val">Juan Sebastián Rodríguez Mora</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">N° Documento</span>
+          <span class="data-val">1.015.478.291 (C.C.)</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">Fecha de nacimiento</span>
+          <span class="data-val">14 de marzo de 2003</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">Dirección</span>
+          <span class="data-val">Calle 45 # 27-18, Bogotá D.C.</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">Celular</span>
+          <span class="data-val">+57 312 984 5671</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">Correo</span>
+          <span class="data-val">j.rodriguez@unisistemas.edu.co</span>
+        </div>
+
+        <!-- Hotspot datos básicos -->
+        <div id="hs-personal" class="hotspot" style="top:-12px;right:-12px;" onclick="openHotspot('personal')"></div>
+      </div>
+
+      <!-- Datos Sensibles -->
+      <div class="card p-5 mb-5 fade-up delay-2" style="position:relative;border-color:rgba(248,113,113,.2);">
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div class="flex items-center gap-2">
+            <h3 class="font-bold text-base">Historial Médico / Discapacidades</h3>
+            <span class="sensitive-badge"><i class="fa-solid fa-triangle-exclamation mr-1"></i>DATO SENSIBLE</span>
+          </div>
+          <span class="tag red"><i class="fa-solid fa-file-medical mr-1"></i>Art. 5 – Ley 1581</span>
+        </div>
+
+        <div class="data-row">
+          <span class="data-label">Tipo discapacidad</span>
+          <span class="data-val" style="color:var(--red);">Discapacidad auditiva (leve)</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">Apoyos requeridos</span>
+          <span class="data-val">Intérprete LSC en evaluaciones orales</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">Diagnóstico médico</span>
+          <span class="data-val" style="color:var(--red);">Hipoacusia neurosensorial bilateral</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">EPS</span>
+          <span class="data-val">Sura EPS</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">Contacto emergencias</span>
+          <span class="data-val">Lucía Mora – +57 310 552 9911</span>
+        </div>
+
+        <!-- Hotspot datos sensibles -->
+        <div id="hs-sensitive" class="hotspot red" style="top:-12px;right:-12px;" onclick="openHotspot('sensitive')"></div>
+      </div>
+
+      <!-- Historial académico -->
+      <div class="card p-5 mb-6 fade-up delay-2">
+        <h3 class="font-bold text-base mb-4">Historial Académico</h3>
+        <div class="grid grid-cols-3 gap-3 text-center">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.75rem;">
+            <div class="text-2xl font-black" style="color:var(--cyan);font-family:'Syne',sans-serif">3.8</div>
+            <div class="text-xs mt-1" style="color:var(--muted)">Promedio</div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.75rem;">
+            <div class="text-2xl font-black" style="color:var(--green);font-family:'Syne',sans-serif">142</div>
+            <div class="text-xs mt-1" style="color:var(--muted)">Créditos</div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.75rem;">
+            <div class="text-2xl font-black" style="color:var(--amber);font-family:'Syne',sans-serif">7</div>
+            <div class="text-xs mt-1" style="color:var(--muted)">Semestre</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- URL bar con ID (para IDOR) -->
+      <div class="card p-4 mb-6 fade-up delay-2" id="idor-section">
+        <p class="text-xs mb-2 font-semibold" style="color:var(--muted);text-transform:uppercase;letter-spacing:.06em">URL actual del perfil</p>
+        <div class="url-bar">
+          <i class="fa-solid fa-lock lock secure"></i>
+          <span class="text-xs">https://unisistemas.edu.co/perfil?<span style="color:var(--red);font-weight:700;">id=2021115073</span></span>
+        </div>
+        <div id="hs-idor" class="hotspot" style="top:-12px;right:-12px;display:none;" onclick="openHotspot('idor')"></div>
+        <p id="idor-hint" class="text-xs mt-2" style="color:var(--muted);display:none;">
+          <i class="fa-solid fa-triangle-exclamation mr-1" style="color:var(--amber)"></i>
+          ¿Qué pasaría si cambias el ID a <code style="color:var(--amber);">2021115072</code>?
+        </p>
+      </div>
+
+      <div class="flex justify-between items-center fade-up delay-3">
+        <button class="btn-secondary" onclick="goToView(currentRole==='dev'?3:2)"><i class="fa-solid fa-arrow-left mr-1"></i>Volver</button>
+        <button class="btn-primary" onclick="showSummary()">
+          Ver Resumen Legal &nbsp;<i class="fa-solid fa-scale-balanced"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       FOOTER (COPYRIGHT Y AUTORÍA)
+  ═══════════════════════════════════════════════ -->
+  <footer style="position: fixed; bottom: 0; left: 0; width: 100%; text-align: center; padding: 1rem 1rem 0.5rem; z-index: 10; pointer-events: none; background: linear-gradient(to top, var(--bg) 40%, transparent);">
+    <p style="font-size: 0.75rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.02em;">
+      &copy; 2026 <span style="color: #94a3b8;">Daniel Enciso, Juan Patiño y Juan Martínez</span> 
+      <span style="color: var(--border); margin: 0 0.5rem;">|</span> 
+      <span style="color: var(--cyan); font-weight: 600;">Corporación Universitaria Autónoma de Nariño (AUNAR)</span>
+    </p>
+  </footer>
+
+  <!-- ═══════════════════════════════════════════════
+       JAVASCRIPT
+  ═══════════════════════════════════════════════ -->
+  <script>
+    /* ── State ── */
+    let currentRole = null;   // 'student' | 'dev'
+    let currentView = 1;
+
+    /* ── Hotspot data ── */
+    const hotspots = {
+
+      /* Vista 2 – Student */
+      url: {
+        title: '⚠ Verifica el dominio del sitio',
+        tag: { text: 'Phishing / MitM', cls: 'amber' },
+        icon: '🔓',
+        body: `
+          <p>La URL muestra <strong style="color:var(--red)">http://</strong> en lugar de <strong style="color:var(--green)">https://</strong>. Esto significa que la conexión <strong>no está cifrada</strong>.</p>
+          <br>
+          <p><strong>¿Qué riesgo implica?</strong></p>
+          <ul style="margin-top:.5rem;list-style:disc;padding-left:1.2rem;display:flex;flex-direction:column;gap:.4rem;">
+            <li><strong>Ataque Man-in-the-Middle (MitM):</strong> Un atacante intercepta el tráfico y lee tus credenciales en texto plano.</li>
+            <li><strong>Phishing:</strong> Dominios falsos como <code style="color:var(--amber)">unisistemas-login.com</code> imitan el portal real.</li>
+          </ul>
+          <br>
+          <p style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:.75rem;font-size:.85rem;">
+            <strong style="color:var(--amber)">🔒 Ley 1581 — Principio de Seguridad (Art. 4 lit. f):</strong> Las entidades deben garantizar medidas técnicas que protejan los datos contra acceso no autorizado.
+          </p>
+        `
+      },
+
+      password: {
+        title: 'Campo de contraseña',
+        tag: { text: 'Confidencialidad', cls: 'amber' },
+        icon: '🔑',
+        body: `
+          <p>El campo muestra <strong>••••••••</strong>: esto es el <em>enmascaramiento visual</em> de la contraseña en el navegador. Es una buena práctica básica.</p>
+          <br>
+          <p><strong>¿Qué debes verificar como usuario?</strong></p>
+          <ul style="margin-top:.5rem;list-style:disc;padding-left:1.2rem;display:flex;flex-direction:column;gap:.4rem;">
+            <li>Que el sitio realmente use HTTPS (no solo el campo esté oculto).</li>
+            <li>Que no estés en una red Wi-Fi pública sin VPN.</li>
+            <li>Usa contraseñas únicas para el portal académico.</li>
+          </ul>
+          <br>
+          <p style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:.75rem;font-size:.85rem;">
+            <strong style="color:var(--amber)">Ley 1581 — Art. 4 lit. e (Principio de Seguridad):</strong> Las instituciones tienen el deber de usar "medidas técnicas, humanas y administrativas" para proteger tu información.
+          </p>
+        `
+      },
+
+      /* Vista 2 – Dev */
+      loginbtn: {
+        title: 'Transmisión de credenciales',
+        tag: { text: 'HTTPS · Art. 4 Ley 1581', cls: 'cyan' },
+        icon: '🛡️',
+        body: `
+          <p>Al hacer clic en "Ingresar", el formulario envía <code style="color:var(--red)">email</code> y <code style="color:var(--red)">password</code> al servidor. Sin HTTPS, viajan en <strong>texto plano</strong> por la red.</p>
+          <br>
+          <p><strong>Obligaciones del desarrollador:</strong></p>
+          <ul style="margin-top:.5rem;list-style:disc;padding-left:1.2rem;display:flex;flex-direction:column;gap:.4rem;">
+            <li>Forzar HTTPS (TLS 1.2+). Redirigir HTTP → HTTPS en servidor (301).</li>
+            <li>Implementar <strong>HSTS</strong> (HTTP Strict Transport Security).</li>
+            <li>Nunca guardar contraseñas en texto plano. Usar <strong>bcrypt / argon2</strong>.</li>
+            <li>Añadir protección CSRF en formularios POST.</li>
+          </ul>
+          <br>
+          <p style="background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.2);border-radius:8px;padding:.75rem;font-size:.85rem;">
+            <strong style="color:var(--cyan)">Ley 1581 de 2012 — Art. 17 (Deberes de los Responsables):</strong> Lit. b: "Adoptar un manual interno de políticas y procedimientos para garantizar el adecuado cumplimiento de la ley". Lit. f: "Adoptar las medidas de seguridad necesarias para proteger los datos."
+          </p>
+        `
+      },
+
+      /* Vista 3 */
+      env: {
+        title: 'Variables de Entorno (.env)',
+        tag: { text: 'Seguridad · Art. 17', cls: 'red' },
+        icon: '📁',
+        body: `
+          <p>Las cadenas de conexión a la base de datos (host, usuario, contraseña, nombre de la DB) <strong>jamás deben estar escritas en el código fuente</strong>.</p>
+          <br>
+          <p><strong>Buenas prácticas:</strong></p>
+          <ul style="margin-top:.5rem;list-style:disc;padding-left:1.2rem;display:flex;flex-direction:column;gap:.4rem;">
+            <li>Usar archivo <code style="color:var(--amber)">.env</code> y añadirlo a <code style="color:var(--amber)">.gitignore</code>.</li>
+            <li>En producción, usar <strong>secrets managers</strong> (AWS Secrets Manager, HashiCorp Vault).</li>
+            <li>Rotar credenciales periódicamente.</li>
+            <li>Asignar permisos mínimos al usuario de DB (<em>Principle of Least Privilege</em>).</li>
+          </ul>
+          <br>
+          <p style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.2);border-radius:8px;padding:.75rem;font-size:.85rem;">
+            <strong style="color:var(--red)">Ley 1581 — Art. 17 lit. f:</strong> El Responsable debe "Adoptar las medidas de seguridad necesarias para proteger los datos personales que se encuentren en sus bases de datos." Exponer credenciales viola este deber de forma directa.
+          </p>
+        `
+      },
+
+      jsonplain: {
+        title: 'JSON de credenciales — sin cifrar',
+        tag: { text: 'Vulnerabilidad MitM', cls: 'amber' },
+        icon: '⚡',
+        body: `
+          <p>En el tráfico HTTP sin TLS, el cuerpo de la petición viaja así:</p>
+          <pre style="background:#050810;border:1px solid var(--border);border-radius:8px;padding:.8rem;font-family:'JetBrains Mono',monospace;font-size:.78rem;margin:.75rem 0;overflow-x:auto;"><span style="color:#c792ea">POST</span> /api/login
+<span style="color:#4ade80">{</span>
+  <span style="color:#22d3ee">"email"</span>: <span style="color:#f59e0b">"j.rodriguez@uni.edu.co"</span>,
+  <span style="color:#22d3ee">"password"</span>: <span style="color:#f87171">"MiClave2024"</span>   <span style="color:#64748b">// texto plano</span>
+<span style="color:#4ade80">}</span></pre>
+          <p>Un atacante en la misma red captura este paquete con herramientas como <strong>Wireshark</strong> o <strong>mitmproxy</strong> y obtiene la contraseña sin esfuerzo.</p>
+          <br>
+          <p style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:.75rem;font-size:.85rem;">
+            <strong style="color:var(--amber)">Solución:</strong> TLS cifra el canal completo. El JSON viaja encriptado y es ilegible para terceros. Además, en el backend la contraseña debe hashearse <em>antes</em> de llegar a la DB.
+          </p>
+        `
+      },
+
+      jsonhash: {
+        title: 'Contraseña hasheada — almacenamiento seguro',
+        tag: { text: 'bcrypt · Art. 17 Ley 1581', cls: 'green' },
+        icon: '✅',
+        body: `
+          <p>Antes de persistir en la base de datos, el backend transforma la contraseña con un algoritmo de hash adaptativo:</p>
+          <pre style="background:#050810;border:1px solid var(--border);border-radius:8px;padding:.8rem;font-family:'JetBrains Mono',monospace;font-size:.78rem;margin:.75rem 0;overflow-x:auto;"><span style="color:#c792ea">// Node.js + bcrypt</span>
+<span style="color:#4ade80">const</span> hash = <span style="color:#22d3ee">await</span> bcrypt.hash(password, <span style="color:#f59e0b">12</span>);
+<span style="color:#64748b">// hash: '$2b$12$eImiTXuWVxfM37uY4JANjQ..'</span>
+
+<span style="color:#64748b">// Verificación (login futuro)</span>
+<span style="color:#4ade80">const</span> ok = <span style="color:#22d3ee">await</span> bcrypt.compare(password, hash);</pre>
+          <p><strong>¿Por qué bcrypt?</strong> Es lento por diseño (factor de costo), tiene sal incorporada y es resistente a ataques de diccionario y rainbow tables.</p>
+          <br>
+          <p style="background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.2);border-radius:8px;padding:.75rem;font-size:.85rem;">
+            <strong style="color:var(--green)">Ley 1581 de 2012 — Art. 17 lit. f:</strong> Conservar la información "bajo las condiciones de seguridad necesarias para impedir su adulteración, pérdida, consulta, uso o acceso no autorizado".
+          </p>
+        `
+      },
+
+      /* Vista 4 – Student */
+      personal: {
+        title: 'Datos Personales y Principio de Confidencialidad',
+        tag: { text: 'Art. 4 · Ley 1581', cls: 'amber' },
+        icon: '📋',
+        body: `
+          <p>Los datos que ves en esta pantalla (nombre, documento, dirección, celular) son tus <strong>datos personales</strong> según la Ley 1581 de 2012.</p>
+          <br>
+          <p><strong>¿Cómo saber si la institución cumple?</strong></p>
+          <ul style="margin-top:.5rem;list-style:disc;padding-left:1.2rem;display:flex;flex-direction:column;gap:.4rem;">
+            <li>Debió pedirte <strong>autorización expresa</strong> para tratarlos (Art. 9).</li>
+            <li>Debe existir una <strong>Política de Tratamiento</strong> publicada y accesible.</li>
+            <li>Solo el personal autorizado puede visualizar estos datos.</li>
+          </ul>
+          <br>
+          <p style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:.75rem;font-size:.85rem;">
+            <strong style="color:var(--amber)">Tus derechos — Art. 8 Ley 1581:</strong><br>
+            ✓ Conocer los datos que se tienen sobre ti.<br>
+            ✓ Actualizarlos y rectificarlos si son incorrectos.<br>
+            ✓ Solicitar su supresión cuando no sea necesario su tratamiento.<br>
+            ✓ Presentar quejas ante la <strong>Superintendencia de Industria y Comercio (SIC)</strong>.
+          </p>
+        `
+      },
+
+      sensitive: {
+        title: 'Datos Sensibles — Máxima Protección',
+        tag: { text: 'Art. 5 · Ley 1581', cls: 'red' },
+        icon: '🚨',
+        body: `
+          <p>Tu historial médico y condición de discapacidad son <strong>Datos Sensibles</strong>, categoría especial de la Ley 1581 de 2012.</p>
+          <br>
+          <p><strong>¿Por qué son "sensibles"?</strong> Porque su revelación puede generar discriminación o perjuicios graves.</p>
+          <br>
+          <p><strong>Protecciones adicionales que aplican:</strong></p>
+          <ul style="margin-top:.5rem;list-style:disc;padding-left:1.2rem;display:flex;flex-direction:column;gap:.4rem;">
+            <li><strong>Autorización explícita</strong>: La institución no puede tratarlos sin tu consentimiento por escrito (Art. 6).</li>
+            <li><strong>Solo para finalidad declarada</strong>: Usarlos para fines distintos (ej. discriminar en evaluaciones) es ilegal.</li>
+            <li><strong>Acceso ultra restringido</strong>: Solo el área de bienestar o personal médico autorizado debería verlos.</li>
+          </ul>
+          <br>
+          <p style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.2);border-radius:8px;padding:.75rem;font-size:.85rem;">
+            <strong style="color:var(--red)">Ley 1581 — Art. 5:</strong> Son datos sensibles aquellos que afectan la intimidad del titular o cuyo uso puede generar discriminación: origen racial o étnico, orientación política, convicciones religiosas, datos de salud, vida sexual y biométricos.
+          </p>
+        `
+      },
+
+      /* Vista 4 – Dev */
+      profile: {
+        title: 'Autenticación vs. Autorización',
+        tag: { text: 'IDOR · Acceso Restringido', cls: 'cyan' },
+        icon: '🔐',
+        body: `
+          <p>Son dos conceptos distintos que suelen confundirse:</p>
+          <br>
+          <ul style="list-style:none;display:flex;flex-direction:column;gap:.6rem;">
+            <li style="background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.2);border-radius:8px;padding:.6rem .8rem;">
+              <strong style="color:var(--cyan)">Autenticación (AuthN):</strong> Verificar <em>quién eres</em>. El JWT/session confirma tu identidad.
+            </li>
+            <li style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:8px;padding:.6rem .8rem;">
+              <strong style="color:var(--red)">Autorización (AuthZ):</strong> Verificar <em>qué puedes ver</em>. El servidor debe confirmar que el <code>id</code> en la URL pertenece al usuario autenticado.
+            </li>
+          </ul>
+          <br>
+          <p style="background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.2);border-radius:8px;padding:.75rem;font-size:.85rem;">
+            <strong style="color:var(--cyan)">Ley 1581 — Principio de Acceso y Circulación Restringida (Art. 4 lit. e):</strong> "El tratamiento sólo podrá hacerse por personas autorizadas por el titular y/o por las personas previstas en la ley." Un IDOR viola este principio de forma directa.
+          </p>
+        `
+      },
+
+      idor: {
+        title: 'Vulnerabilidad IDOR — Broken Object Level Authorization',
+        tag: { text: 'OWASP API1 · IDOR', cls: 'red' },
+        icon: '💀',
+        body: `
+          <p>La URL expone el ID del estudiante: <code style="color:var(--amber)">/perfil?id=2021115073</code></p>
+          <br>
+          <p>Si el servidor NO verifica que el ID corresponde al usuario autenticado, cualquier estudiante puede cambiar el número y ver el perfil —incluidos datos médicos— de otro compañero.</p>
+          <br>
+          <pre style="background:#050810;border:1px solid var(--border);border-radius:8px;padding:.8rem;font-family:'JetBrains Mono',monospace;font-size:.78rem;margin:.5rem 0;overflow-x:auto;"><span style="color:#c792ea">// ❌ Backend vulnerable</span>
+app.get(<span style="color:#f59e0b">'/perfil'</span>, async (req, res) => {
+  <span style="color:#4ade80">const</span> user = await DB.find(req.query.id); <span style="color:#f87171">// Sin verificar</span>
+  res.json(user);
+});
+
+<span style="color:#c792ea">// ✅ Corrección obligatoria</span>
+app.get(<span style="color:#f59e0b">'/perfil'</span>, authMiddleware, async (req, res) => {
+  <span style="color:#4ade80">if</span> (req.query.id !== req.user.id) <span style="color:#f87171">return</span> res.status(<span style="color:#f59e0b">403</span>).send();
+  <span style="color:#4ade80">const</span> user = await DB.find(req.user.id); <span style="color:#64748b">// Desde el token</span>
+  res.json(user);
+});</pre>
+          <p style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.2);border-radius:8px;padding:.75rem;font-size:.85rem;">
+            <strong style="color:var(--red)">Ley 1581 — Art. 17 lit. f:</strong> Permitir que un tercero acceda a datos médicos por un IDOR constituye una violación del deber de seguridad. La SIC puede imponer multas de hasta 2.000 SMMLV (Art. 23).
+          </p>
+        `
+      }
+    };
+
+    /* ──── Navegación ──── */
+    function goToView(n) {
+      document.getElementById(`view-${currentView}`).classList.remove('active');
+      currentView = n;
+      document.getElementById(`view-${n}`).classList.add('active');
+      window.scrollTo(0,0);
+    }
+
+    function selectRole(role) {
+      currentRole = role;
+      setupView2();
+      goToView(2);
+    }
+
+    function goToNext() {
+      if (currentRole === 'dev') {
+        setupView3();
+        goToView(3);
+      } else {
+        setupView4();
+        goToView(4);
+      }
+    }
+
+    /* ──── Setup vistas según rol ──── */
+    function setupView2() {
+      const badge = document.getElementById('login-role-badge');
+      const urlIcon = document.getElementById('url-lock-icon');
+      const urlText = document.getElementById('url-text');
+      const hsUrl = document.getElementById('hs-url');
+      const hsPwd = document.getElementById('hs-password');
+      const hsBtn = document.getElementById('hs-login-btn');
+
+      if (currentRole === 'student') {
+        badge.innerHTML = '<span style="background:rgba(245,158,11,.12);color:var(--amber);border:1px solid rgba(245,158,11,.25);border-radius:4px;padding:2px 8px;font-size:.7rem;font-family:JetBrains Mono,monospace;">ROL: ESTUDIANTE</span>';
+        hsUrl.className = 'hotspot amber';
+        hsUrl.style.display = 'flex';
+        hsPwd.className = 'hotspot amber';
+        hsPwd.style.display = 'flex';
+        hsBtn.style.display = 'none';
+      } else {
+        badge.innerHTML = '<span style="background:rgba(34,211,238,.1);color:var(--cyan);border:1px solid rgba(34,211,238,.25);border-radius:4px;padding:2px 8px;font-size:.7rem;font-family:JetBrains Mono,monospace;">ROL: DESARROLLADOR</span>';
+        // Solo hotspot en botón login para dev
+        hsUrl.style.display = 'none';
+        hsPwd.style.display = 'none';
+        hsBtn.style.display = 'flex';
+      }
+    }
+
+    function setupView3() {
+      // Vista 3 solo para dev — nada extra que configurar
+    }
+
+    function setupView4() {
+      const badge = document.getElementById('dash-role-badge');
+      const hsProfile = document.getElementById('hs-profile');
+      const hsPersonal = document.getElementById('hs-personal');
+      const hsSensitive = document.getElementById('hs-sensitive');
+      const hsIdor = document.getElementById('hs-idor');
+      const idorHint = document.getElementById('idor-hint');
+
+      if (currentRole === 'student') {
+        badge.textContent = 'Estudiante';
+        hsProfile.style.display = 'none';
+        hsPersonal.className = 'hotspot amber';
+        hsPersonal.style.display = 'flex';
+        hsSensitive.className = 'hotspot red';
+        hsSensitive.style.display = 'flex';
+        hsIdor.style.display = 'none';
+        idorHint.style.display = 'none';
+        document.getElementById('idor-section').style.display = 'none';
+      } else {
+        badge.textContent = 'Desarrollador';
+        badge.className = 'tag cyan';
+        hsProfile.className = 'hotspot cyan';
+        hsProfile.style.display = 'flex';
+        hsPersonal.style.display = 'none';
+        hsSensitive.className = 'hotspot red';
+        hsSensitive.style.display = 'flex';
+        hsIdor.className = 'hotspot red';
+        hsIdor.style.display = 'flex';
+        idorHint.style.display = 'block';
+        document.getElementById('idor-section').style.display = 'block';
+      }
+    }
+
+    /* ──── Modal ──── */
+    function openHotspot(key) {
+      const h = hotspots[key];
+      if (!h) return;
+
+      document.getElementById('modal-icon').textContent = h.icon;
+      document.getElementById('modal-title').textContent = h.title;
+      document.getElementById('modal-body').innerHTML = h.body;
+
+      const tagEl = document.getElementById('modal-tag');
+      tagEl.className = `tag ${h.tag.cls}`;
+      tagEl.textContent = h.tag.text;
+
+      // Color header accent
+      const header = document.getElementById('modal-header');
+      const colors = { amber:'rgba(245,158,11,.15)', cyan:'rgba(34,211,238,.12)', red:'rgba(248,113,113,.12)', green:'rgba(74,222,128,.12)' };
+      header.style.background = colors[h.tag.cls] || '';
+
+      document.getElementById('modal-overlay').classList.add('open');
+    }
+
+    function closeModal(e) {
+      if (!e || e.target === document.getElementById('modal-overlay')) {
+        document.getElementById('modal-overlay').classList.remove('open');
+      }
+    }
+
+    /* ──── Resumen Legal ──── */
+    function showSummary() {
+      const isStudent = currentRole === 'student';
+      document.getElementById('modal-icon').textContent = '⚖️';
+      document.getElementById('modal-title').textContent = 'Resumen · Ley 1581 de 2012';
+      const tagEl = document.getElementById('modal-tag');
+      tagEl.className = 'tag cyan';
+      tagEl.textContent = 'Protección de Datos · Colombia';
+      document.getElementById('modal-header').style.background = 'rgba(34,211,238,.12)';
+
+      document.getElementById('modal-body').innerHTML = `
+        <p style="font-size:.85rem;margin-bottom:1rem;">Has completado el simulador como <strong style="color:${isStudent?'var(--amber)':'var(--cyan)'};">${isStudent?'Estudiante':'Desarrollador'}</strong>. Estos son los puntos clave aprendidos:</p>
+        <div style="display:flex;flex-direction:column;gap:.5rem;">
+          ${isStudent ? `
+          <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:.65rem .8rem;font-size:.83rem;">
+            <strong style="color:var(--amber)">Art. 4 — Principio de Seguridad:</strong> Verifica siempre HTTPS y el dominio del portal antes de ingresar tu contraseña.
+          </div>
+          <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:.65rem .8rem;font-size:.83rem;">
+            <strong style="color:var(--amber)">Art. 5 — Datos Sensibles:</strong> Tu información médica tiene protección especial. Solo puede tratarse con tu consentimiento expreso.
+          </div>
+          <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:.65rem .8rem;font-size:.83rem;">
+            <strong style="color:var(--amber)">Art. 8 — Tus Derechos:</strong> Puedes conocer, actualizar, rectificar y suprimir tus datos. Quejas ante la SIC: www.sic.gov.co
+          </div>
+          ` : `
+          <div style="background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.2);border-radius:8px;padding:.65rem .8rem;font-size:.83rem;">
+            <strong style="color:var(--cyan)">Art. 4 lit. f — Seguridad:</strong> HTTPS obligatorio. Hashing de contraseñas con bcrypt/argon2. Variables de entorno para secrets.
+          </div>
+          <div style="background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.2);border-radius:8px;padding:.65rem .8rem;font-size:.83rem;">
+            <strong style="color:var(--cyan)">Art. 4 lit. e — Acceso Restringido:</strong> Implementar AuthZ real. Validar el ID del recurso contra el usuario del token (prevención IDOR).
+          </div>
+          <div style="background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.2);border-radius:8px;padding:.65rem .8rem;font-size:.83rem;">
+            <strong style="color:var(--cyan)">Art. 17 lit. f — Responsabilidad:</strong> Adoptar medidas de seguridad para proteger las bases de datos. Multas de hasta 2.000 SMMLV (Art. 23).
+          </div>
+          `}
+        </div>
+        <p style="margin-top:1rem;font-size:.78rem;color:var(--muted);text-align:center;">Fuente: Ley Estatutaria 1581 de 2012 — Congreso de la República de Colombia · Decreto 1074 de 2015</p>
+      `;
+      document.getElementById('modal-overlay').classList.add('open');
+    }
+
+    /* ── Esc para cerrar modal ── */
+    document.addEventListener('keydown', e => { if(e.key==='Escape') closeModal(); });
+
+    /* ── Hotspot verde no tiene animación CSS, la agrego JS ── */
+    const hsGreen = document.getElementById('hs-json-hash');
+    if(hsGreen){
+      let glow = false;
+      setInterval(()=>{
+        glow = !glow;
+        hsGreen.style.boxShadow = glow ? '0 0 0 8px rgba(74,222,128,0)' : '0 0 0 0 rgba(74,222,128,.6)';
+      },1000);
+    }
+  </script>
+</body>
+</html>
